@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Dependencias / build (proyecto sin toolchain, por ahora nada que ignorar aquí)
+node_modules/
+
+# Logs
+*.log
+
+# Copias temporales
+*~
