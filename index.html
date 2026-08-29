@@ -348,6 +348,12 @@
     .botones-accion button { min-width: 100%; }
   }
 
+  @media (max-width: 600px) {
+    #nota { min-width: 320px; }
+    #panel-vista { overflow-x: auto; }
+    #nota .firma .linea { width: 200px; }
+  }
+
   @media (max-width: 480px) {
     body { padding: 12px; }
     .panel { padding: 16px; }
@@ -564,7 +570,7 @@
         { id: 'area', label: 'Área / Departamento', tipo: 'text', placeholder: 'Ej: Área de Ciencias Biológicas', obligatorio: true }
       ],
       generar: function (d) {
-        return 'Me dirijo a usted a fin de solicitar mi inscripción al concurso para cubrir el cargo de ' + (d.cargo || '[cargo]') + ' correspondiente a la cátedra de ' + (d.catedra || '[cátedra]') + ', del área de ' + (d.area || '[área]') + ', de acuerdo a lo establecido en la convocatoria vigente.\n\nDeclaro cumplir con los requisitos exigidos en las bases y condiciones del concurso.' + parrafoDocumentacion(true) + '\nQuedo a disposición para cualquier consulta o requerimiento adicional.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+        return 'Me dirijo a usted a fin de solicitar mi inscripción al concurso para cubrir el cargo de ' + (d.cargo || '[cargo]') + ' correspondiente a la cátedra de ' + (d.catedra || '[cátedra]') + ', del área de ' + (d.area || '[área]') + ', de acuerdo a lo establecido en la convocatoria vigente.\n\nDeclaro cumplir con los requisitos exigidos en las bases y condiciones del concurso.' + parrafoDocumentacion(true) + '\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
       }
     },
     'Inscripción a Concurso Alumno': {
@@ -576,7 +582,7 @@
         { id: 'area', label: 'Área / Departamento', tipo: 'text', placeholder: 'Ej: Área de Ciencias Biológicas', obligatorio: true }
       ],
       generar: function (d) {
-        return 'Me dirijo a usted a fin de solicitar mi inscripción al concurso para cubrir el cargo de ' + (d.cargo || '[cargo]') + ' correspondiente a ' + (d.catedra || '[cátedra/sector]') + ', del área de ' + (d.area || '[área]') + ', de acuerdo a lo establecido en la convocatoria vigente.\n\nDeclaro cumplir con los requisitos exigidos en las bases y condiciones del concurso.' + parrafoDocumentacion(true) + '\nQuedo a disposición para cualquier consulta o requerimiento adicional.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+        return 'Me dirijo a usted a fin de solicitar mi inscripción al concurso para cubrir el cargo de ' + (d.cargo || '[cargo]') + ' correspondiente a ' + (d.catedra || '[cátedra/sector]') + ', del área de ' + (d.area || '[área]') + ', de acuerdo a lo establecido en la convocatoria vigente.\n\nDeclaro cumplir con los requisitos exigidos en las bases y condiciones del concurso.' + parrafoDocumentacion(true) + '\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
       }
     },
     'Solicitud de Plan de Estudios y Programas': {
@@ -657,8 +663,8 @@
     if (!authority) return '<span class="placeholder">[Seleccione un destinatario]</span>';
     const unidad = authority.ambito === 'FBCB'
       ? 'Facultad de Bioquímica y Ciencias Biológicas'
-      : 'Rectorado — Universidad Nacional del Litoral';
-    return authority.tratamiento + ' de la<br>' + unidad + '<br><strong>' + authority.nombre + '</strong><br>S / D';
+      : 'Rectorado de la Universidad Nacional del Litoral';
+    return authority.tratamiento + ' de la<br>' + unidad + '<br><strong>' + authority.nombre + '</strong><br>S / D' + (authority.ambito === 'FBCB' ? '<br><span style="font-size:12px;color:#666;">(FBCB — UNL)</span>' : '');
   }
 
   /** Deriva el nombre de archivo sugerido. */
@@ -910,14 +916,20 @@
 
   function validarFormulario() {
     const errores = [];
+    let primerCampoInvalido = null;
 
-    if (!validarPerfil(estado.perfil)) errores.push('Seleccione un perfil.');
-    if (!validarNombre(estado.nombre)) errores.push('Ingrese el nombre completo.');
-    if (!validarDNI(estado.dni)) errores.push('El DNI debe tener 7 u 8 dígitos.');
-    if (!validarEmail(estado.email)) errores.push('Ingrese un email válido.');
-    if (!validarTelefono(estado.telefono)) errores.push('El teléfono no es válido.');
-    if (!estado.destinatarioId) errores.push('Seleccione un destinatario.');
-    if (!estado.asunto) errores.push('Seleccione un asunto.');
+    const marcarInvalido = function (el, msg) {
+      errores.push(msg);
+      if (!primerCampoInvalido && el) primerCampoInvalido = el;
+    };
+
+    if (!validarPerfil(estado.perfil)) marcarInvalido(els.perfil, 'Seleccione un perfil.');
+    if (!validarNombre(estado.nombre)) marcarInvalido(els.nombre, 'Ingrese el nombre completo.');
+    if (!validarDNI(estado.dni)) marcarInvalido(els.dni, 'El DNI debe tener 7 u 8 dígitos.');
+    if (!validarEmail(estado.email)) marcarInvalido(els.email, 'Ingrese un email válido.');
+    if (!validarTelefono(estado.telefono)) marcarInvalido(els.telefono, 'El teléfono no es válido.');
+    if (!estado.destinatarioId) marcarInvalido(els.destinatario, 'Seleccione un destinatario.');
+    if (!estado.asunto) marcarInvalido(els.asunto, 'Seleccione un asunto.');
 
     const config = ASUNTOS_CONFIG[estado.asunto];
     if (config) {
@@ -925,12 +937,15 @@
         const v = estado.campos[campoId];
         if (!v || !v.trim()) {
           const campo = config.campos.find(function (c) { return c.id === campoId; });
-          errores.push('Complete: ' + (campo ? campo.label : campoId) + '.');
+          marcarInvalido($('dyn-' + campoId), 'Complete: ' + (campo ? campo.label : campoId) + '.');
         }
       });
     }
 
     mostrarError(errores.length ? errores.join(' ') : '');
+    if (primerCampoInvalido && typeof primerCampoInvalido.focus === 'function') {
+      primerCampoInvalido.focus();
+    }
     return errores.length === 0;
   }
 
@@ -980,12 +995,12 @@
     return nombre.endsWith('.pdf') ? nombre : nombre + '.pdf';
   }
 
-  function generarPDF(opciones) {
+  async function generarPDF(opciones) {
     // opciones: { save: bool, share: bool }
-    if (!validarFormulario()) return Promise.resolve(false);
+    if (!validarFormulario()) return false;
     if (typeof html2pdf === 'undefined') {
       mostrarError('Error: la librería de PDF no se cargó correctamente. Verifique que lib/html2pdf.bundle.min.js exista.');
-      return Promise.resolve(false);
+      return false;
     }
 
     const exportState = estadoParaExportar();
@@ -995,16 +1010,22 @@
     document.body.classList.add('pdf-render');
     els.nota.setAttribute('contenteditable', 'false');
 
+    // Estado "Generando...": deshabilitar botones y recordar etiquetas originales
+    const etiquetaDescargar = els.btnDescargar.textContent;
+    const etiquetaCompartir = els.btnCompartir.textContent;
+    els.btnDescargar.disabled = true;
+    els.btnCompartir.disabled = true;
+    els.btnDescargar.textContent = 'Generando...';
+    els.btnCompartir.textContent = 'Generando...';
+
     const opt = {
       margin: 20,
       filename: obtenerNombreArchivo(),
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, letterRendering: true },
+      html2canvas: { scale: 2, letterRendering: true, useCORS: true, logging: false, backgroundColor: '#ffffff', windowHeight: els.nota.scrollHeight, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'] }
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
-
-    const worker = html2pdf().set(opt).from(els.nota);
 
     const done = function () {
       document.body.classList.remove('pdf-render');
@@ -1012,22 +1033,30 @@
       renderPreview(); // restaurar vista viva
     };
 
-    if (opciones.share) {
-      return worker.output('blob').then(function (blob) {
+    try {
+      const worker = html2pdf().set(opt).from(els.nota);
+
+      if (opciones.share) {
+        const blob = await worker.output('blob');
         done();
         return blob;
-      });
-    }
+      }
 
-    return worker.save().then(function () {
+      await worker.save();
       done();
       return true;
-    }).catch(function (err) {
+    } catch (err) {
+      // Mismo patrón de error en ambas rutas: restaurar vista y notificar en aria-live
       done();
       mostrarError('No se pudo generar el PDF. Intente nuevamente.');
       console.error('Error generando PDF:', err);
       return false;
-    });
+    } finally {
+      els.btnDescargar.disabled = false;
+      els.btnCompartir.disabled = false;
+      els.btnDescargar.textContent = etiquetaDescargar;
+      els.btnCompartir.textContent = etiquetaCompartir;
+    }
   }
 
   function descargarPDF() {
@@ -1059,12 +1088,15 @@
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: nombre });
       } else {
+        alert('Tu dispositivo no soporta compartir archivos. Se descargó el PDF.');
         descargarBlob(blob, nombre);
       }
     } catch (err) {
       if (err && err.name === 'AbortError') {
         // el usuario canceló el share: silencioso
       } else {
+        console.error('Error al compartir el PDF:', err);
+        alert('Error al compartir: ' + (err && err.message ? err.message : 'intente nuevamente.'));
         descargarBlob(blob, nombre);
       }
     } finally {
@@ -1164,6 +1196,22 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && els.modal.classList.contains('active')) {
         cerrarModalCompartir();
+      }
+    });
+
+    // Trampa de foco: Tab/shift+Tab no debe salir del modal activo
+    els.modal.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab' || !els.modal.classList.contains('active')) return;
+      const focusables = els.modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusables.length === 0) return;
+      const primero = focusables[0];
+      const ultimo = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === primero) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault();
+        primero.focus();
       }
     });
 
