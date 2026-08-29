@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Notas — FBCB · UNL</title>
+<!-- 100% offline: html2pdf se carga desde lib/ local, sin CDN, sin fuentes externas -->
+<script src="lib/html2pdf.bundle.min.js"></script>
+<style>
+  :root {
+    --fcb-green: #00A651;
+    --fcb-green-dark: #008540;
+    --fcb-green-light: #E8F5E9;
+    --text-primary: #1A202C;
+    --text-secondary: #4A5568;
+    --bg-page: #F4F6F9;
+    --bg-panel: #FFFFFF;
+    --border-color: #CBD5E1;
+    --error-color: #E53E3E;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+
+  h1 {
+    text-align: center;
+    color: var(--fcb-green);
+    margin-bottom: 5px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    font-size: 28px;
+  }
+
+  .subtitulo {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-top: 0;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 24px auto 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border-top: 4px solid var(--fcb-green);
+  }
+
+  .panel h3 {
+    margin-top: 0;
+    color: var(--fcb-green);
+    border-bottom: 2px solid var(--fcb-green-light);
+    padding-bottom: 10px;
+    font-weight: 600;
+    font-size: 18px;
+  }
+
+  label {
+    display: block;
+    margin-top: 16px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  label .req { color: var(--error-color); }
+
+  input, textarea, select {
+    width: 100%;
+    padding: 10px 12px;
+    margin-top: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+    background-color: #FAFAFA;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--fcb-green);
+    box-shadow: 0 0 0 3px rgba(0, 166, 81, 0.15);
+    background-color: #FFFFFF;
+  }
+
+  .seccion {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border-color);
+  }
+
+  .seccion-titulo {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .botones-accion {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .botones-accion button {
+    flex: 1;
+    min-width: 140px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+  }
+
+  .botones-accion button:active { transform: scale(0.98); }
+
+  #btnDescargar {
+    background: var(--fcb-green);
+    color: #fff;
+  }
+
+  #btnDescargar:hover { background: var(--fcb-green-dark); }
+
+  .btn-compartir {
+    background: var(--text-secondary);
+    color: #fff;
+  }
+
+  .btn-compartir:hover { background: #2D3748; }
+
+  /* ---------- Vista previa: nota A4 ---------- */
+  #nota {
+    margin-top: 16px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 32px 36px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #111;
+    word-wrap: break-word;
+  }
+
+  #nota .fecha {
+    text-align: right;
+    margin-bottom: 24px;
+  }
+
+  #nota .destinatario {
+    margin-bottom: 24px;
+    font-weight: 600;
+  }
+
+  #nota .referencia {
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+
+  #nota .cuerpo {
+    white-space: pre-wrap;
+    margin-bottom: 28px;
+  }
+
+  #nota .firma {
+    margin-top: 32px;
+    page-break-inside: avoid;
+  }
+
+  #nota .firma .linea {
+    width: 280px;
+    border-top: 1px solid #111;
+    margin-bottom: 6px;
+  }
+
+  #nota .firma .dato {
+    font-size: 13px;
+    color: #333;
+  }
+
+  #nota .firma .condicion {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .placeholder { color: #999; font-style: italic; }
+
+  /* Elementos editables de la vista previa */
+  [contenteditable="true"] {
+    cursor: text;
+    outline: 1px dashed transparent;
+    transition: outline-color 0.2s, background-color 0.2s, border-radius 0.2s;
+  }
+
+  [contenteditable="true"]:hover {
+    outline-color: rgba(0, 166, 81, 0.4);
+    background-color: rgba(0, 166, 81, 0.04);
+    border-radius: 4px;
+  }
+
+  [contenteditable="true"]:focus {
+    outline: 2px solid var(--fcb-green);
+    background-color: var(--fcb-green-light);
+    border-radius: 4px;
+  }
+
+  /* Modo exportación PDF: sin cromo de la página */
+  body.pdf-render * {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  body.pdf-render .panel,
+  body.pdf-render h1,
+  body.pdf-render .subtitulo,
+  body.pdf-render .container,
+  body.pdf-render .botones-accion {
+    display: none !important;
+  }
+
+  body.pdf-render #panel-vista {
+    display: block !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.pdf-render .panel-titulo-vista { display: none !important; }
+
+  body.pdf-render #nota {
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 12px;
+  }
+
+  /* ---------- Modal de compartir ---------- */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  }
+
+  .modal-header h3 { margin: 0 0 4px; color: var(--text-primary); }
+  .modal-header p { margin: 0 0 16px; color: var(--text-secondary); font-size: 14px; }
+
+  .opciones-compartir {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .opcion-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: #FAFAFA;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+
+  .opcion-btn:hover {
+    border-color: var(--fcb-green);
+    background: var(--fcb-green-light);
+  }
+
+  .opcion-btn .texto strong { display: block; font-size: 15px; }
+  .opcion-btn .texto small { color: var(--text-secondary); font-size: 13px; }
+
+  .modal-cerrar {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: var(--text-secondary);
+    color: #fff;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .modal-cerrar:hover { background: #2D3748; }
+
+  /* Errores de validación */
+  .error-msg {
+    display: none;
+    margin-top: 4px;
+    color: var(--error-color);
+    font-size: 13px;
+  }
+
+  .campo-error input,
+  .campo-error textarea,
+  .campo-error select {
+    border-color: var(--error-color);
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; }
+    .botones-accion button { min-width: 100%; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 12px; }
+    .panel { padding: 16px; }
+    #nota { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Generador de Notas</h1>
+<p class="subtitulo">Facultad de Bioquímica y Ciencias Biológicas — Universidad Nacional del Litoral</p>
+
+<div class="container">
+  <!-- ============ PANEL: FORMULARIO ============ -->
+  <div class="panel" id="panel-form">
+    <h3>Datos de la nota</h3>
+
+    <form id="form-nota" novalidate>
+      <fieldset>
+        <legend class="seccion-titulo">Perfil del remitente</legend>
+
+        <label for="perfil">Perfil <span class="req">*</span></label>
+        <select id="perfil">
+          <option value="">-- Seleccione un perfil --</option>
+          <option value="Alumno">Alumno/a</option>
+          <option value="Docente">Docente</option>
+          <option value="Personal">Personal</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </fieldset>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Destinatario y asunto</div>
+
+        <label for="destinatario">Destinatario <span class="req">*</span></label>
+        <select id="destinatario">
+          <option value="">-- Seleccione una autoridad --</option>
+        </select>
+
+        <label for="asunto">Asunto <span class="req">*</span></label>
+        <select id="asunto">
+          <option value="">-- Seleccione un asunto --</option>
+        </select>
+      </div>
+
+      <div id="campos-dinamicos"></div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Datos del remitente</div>
+
+        <label for="nombre">Nombre completo <span class="req">*</span></label>
+        <input type="text" id="nombre" required placeholder="Apellido, Nombre">
+
+        <label for="dni">DNI <span class="req">*</span></label>
+        <input type="text" id="dni" required placeholder="Ej: 30123456" inputmode="numeric">
+
+        <label for="email">Email <span class="req">*</span></label>
+        <input type="email" id="email" required placeholder="ejemplo@correo.com">
+
+        <label for="telefono">Teléfono (opcional)</label>
+        <input type="tel" id="telefono" placeholder="Ej: 0342-1234567">
+      </div>
+
+      <label for="archivo-nombre">Nombre del archivo PDF</label>
+      <input type="text" id="archivo-nombre" placeholder="Nota_Asunto_NombreApellido.pdf">
+
+      <div class="botones-accion">
+        <button type="button" id="btnDescargar">Descargar PDF</button>
+        <button type="button" id="btnCompartir" class="btn-compartir">Compartir</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ============ PANEL: VISTA PREVIA ============ -->
+  <div class="panel" id="panel-vista">
+    <h3 class="panel-titulo-vista">Vista previa</h3>
+    <div id="nota" aria-label="Vista previa de la nota. Los campos en verde son editables.">
+      <div class="fecha" id="v-fecha" contenteditable="true"></div>
+      <div class="destinatario" id="v-destinatario" contenteditable="true"></div>
+      <div class="referencia"><strong>Ref.:</strong> <span id="v-asunto" contenteditable="true"></span></div>
+      <div class="cuerpo" id="v-contenido" contenteditable="true"></div>
+      <div class="firma">
+        <div class="condicion" id="v-condicion" contenteditable="true"></div>
+        <div class="linea"></div>
+        <div class="dato" id="v-nombre" contenteditable="true"></div>
+        <div class="dato" id="v-dni" contenteditable="true"></div>
+        <div class="dato" id="v-email" contenteditable="true"></div>
+        <div class="dato" id="v-telefono" contenteditable="true"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL DE COMPARTIR ============ -->
+<div id="modalCompartir" class="modal-overlay">
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal-header">
+      <h3 id="modal-titulo">Compartir nota</h3>
+      <p>Su PDF se generará y compartirá con la aplicación nativa del dispositivo.</p>
+    </div>
+    <div class="opciones-compartir">
+      <button type="button" class="opcion-btn" id="btnCompartirNativo">
+        <span class="texto">
+          <strong>Compartir nativo</strong>
+          <small>WhatsApp, Telegram, email, etc. (móvil)</small>
+        </span>
+      </button>
+      <button type="button" class="opcion-btn" id="btnDescargarDesdeModal">
+        <span class="texto">
+          <strong>Descargar PDF</strong>
+          <small>Guardar en el dispositivo</small>
+        </span>
+      </button>
+    </div>
+    <button type="button" class="modal-cerrar" id="btnCerrarModal">Cancelar</button>
+  </div>
+</div>
+
+<div id="error-live" class="error-msg" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ===================================================================
+   * MÓDULO: CONSTANTES DECLARATIVAS
+   * =================================================================== */
+
+  const PERFILES = ['Alumno', 'Docente', 'Personal', 'Otro'];
+
+  /** Condición que se muestra en la firma según perfil. */
+  const CONDICION_PERFIL = {
+    Alumno: 'Alumno/a — Facultad de Bioquímica y Ciencias Biológicas',
+    Docente: 'Docente — Facultad de Bioquímica y Ciencias Biológicas',
+    Personal: 'Personal — Facultad de Bioquímica y Ciencias Biológicas',
+    Otro: ''
+  };
+
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  const RE_DNI = /^\d{7,8}$/;
+  const RE_EMAIL = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
+  const RE_TEL = /^[\d\s\-+()]{7,15}$/;
+
+  /** 21 autoridades oficiales 2026-2030 (10 FBCB + 11 Rectorado UNL). */
+  const AUTHORITIES = [
+    // FBCB (10)
+    { id: 'decano-fbcb', nombre: 'Dr. Guillermo Ramos', cargo: 'Decano', tratamiento: 'Señor Decano', ambito: 'FBCB' },
+    { id: 'vicedecana-fbcb', nombre: 'Esp. Cecilia Serra', cargo: 'Vicedecana', tratamiento: 'Señora Vicedecana', ambito: 'FBCB' },
+    { id: 'sec-adm-fbcb', nombre: 'Téc. Adriana Vidaechea', cargo: 'Secretaria Administrativa', tratamiento: 'Señora Secretaria Administrativa', ambito: 'FBCB' },
+    { id: 'sec-acad-fbcb', nombre: 'Dra. María Fernanda Simoniello', cargo: 'Secretaria Académica', tratamiento: 'Señora Secretaria Académica', ambito: 'FBCB' },
+    { id: 'dir-est-fbcb', nombre: 'Lic. Rosario Paulini', cargo: 'Directora de Asuntos Estudiantiles', tratamiento: 'Señora Directora de Asuntos Estudiantiles', ambito: 'FBCB' },
+    { id: 'sec-cyt-fbcb', nombre: 'Dr. Guillermo Sihufe', cargo: 'Secretario de Ciencia y Técnica', tratamiento: 'Señor Secretario de Ciencia y Técnica', ambito: 'FBCB' },
+    { id: 'sec-des-fbcb', nombre: 'CPN María Victoria Luque', cargo: 'Secretaria de Desarrollo Económico', tratamiento: 'Señora Secretaria de Desarrollo Económico', ambito: 'FBCB' },
+    { id: 'sec-ext-fbcb', nombre: 'Dra. Sandra Ravelli', cargo: 'Secretaria de Extensión Social', tratamiento: 'Señora Secretaria de Extensión Social', ambito: 'FBCB' },
+    { id: 'sec-pos-fbcb', nombre: 'Dra. Gabriela Micheloud', cargo: 'Secretaria de Posgrado', tratamiento: 'Señora Secretaria de Posgrado', ambito: 'FBCB' },
+    { id: 'dir-ess-fbcb', nombre: 'Mg. Germán Boero', cargo: 'Director de la Escuela Superior de Sanidad "Dr. Ramón Carrillo"', tratamiento: 'Señor Director de la Escuela Superior de Sanidad', ambito: 'FBCB' },
+    // Rectorado UNL (11)
+    { id: 'rectora-unl', nombre: 'Prof. Laura Tarabella', cargo: 'Rectora', tratamiento: 'Señora Rectora', ambito: 'Rectorado UNL' },
+    { id: 'vicerrectora-unl', nombre: 'CPN Liliana Dillon', cargo: 'Vicerrectora', tratamiento: 'Señora Vicerrectora', ambito: 'Rectorado UNL' },
+    { id: 'sec-gen-unl', nombre: 'Arq. Sergio Cosentino', cargo: 'Secretario General', tratamiento: 'Señor Secretario General', ambito: 'Rectorado UNL' },
+    { id: 'sec-acad-inov-unl', nombre: 'Lic. María Bárbara Mántaras', cargo: 'Secretaria Académica e Innovación Educativa', tratamiento: 'Señora Secretaria Académica e Innovación Educativa', ambito: 'Rectorado UNL' },
+    { id: 'sec-cat-unl', nombre: 'Dra. Larisa Carrera', cargo: 'Secretaria de Ciencia, Arte y Tecnología', tratamiento: 'Señora Secretaria de Ciencia, Arte y Tecnología', ambito: 'Rectorado UNL' },
+    { id: 'sec-ext-unl', nombre: 'Ana Indus. María Lucrecia Wilson', cargo: 'Secretaria de Extensión Universitaria', tratamiento: 'Señora Secretaria de Extensión Universitaria', ambito: 'Rectorado UNL' },
+    { id: 'sec-vti-unl', nombre: 'Dr. Javier Lottersberger', cargo: 'Secretario de Vinculación Tecnológica e Innovación', tratamiento: 'Señor Secretario de Vinculación Tecnológica e Innovación', ambito: 'Rectorado UNL' },
+    { id: 'sec-ft-unl', nombre: 'Arq. Sara Lauría', cargo: 'Secretaria de Fortalecimiento Territorial', tratamiento: 'Señora Secretaria de Fortalecimiento Territorial', ambito: 'Rectorado UNL' },
+    { id: 'sec-bien-unl', nombre: 'Ing. Gustavo Menéndez', cargo: 'Secretario de Bienestar Universitario', tratamiento: 'Señor Secretario de Bienestar Universitario', ambito: 'Rectorado UNL' },
+    { id: 'sec-cul-unl', nombre: 'Abog. María Lucila Reyna', cargo: 'Secretaria de Cultura y Medios', tratamiento: 'Señora Secretaria de Cultura y Medios', ambito: 'Rectorado UNL' },
+    { id: 'sec-adm-pre-unl', nombre: 'CPN Germán Bonino', cargo: 'Secretario de Administración y Gestión Presupuestaria', tratamiento: 'Señor Secretario de Administración y Gestión Presupuestaria', ambito: 'Rectorado UNL' }
+  ];
+
+  /** 6 asuntos con plantillas y campos dinámicos (formato AppME 2.0). */
+  const ASUNTOS_CONFIG = {
+    'Inscripción Fuera de Término': {
+      obligatorios: ['carrera', 'materias'],
+      campos: [
+        { id: 'carrera', label: 'Carrera', tipo: 'text', placeholder: 'Ej: Licenciatura en Bioquímica', obligatorio: true },
+        { id: 'materias', label: 'Asignaturas', tipo: 'textarea', placeholder: 'Liste las asignaturas (una por línea)', obligatorio: true },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        return 'Me dirijo a usted a fin de solicitar mi inscripción fuera de término en las asignaturas que se detallan a continuación, correspondientes a la carrera de ' + (d.carrera || '[carrera]') + ', del ciclo lectivo en curso:\n\n' + (formatearListaAsignaturas(d.materias) || '[listado de asignaturas]') + '\n' + parrafoMotivo(d.motivo) + '\nA tal efecto, quedo a disposición para ampliar cualquier información que se considere necesaria.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Extensión de Regularidad': {
+      obligatorios: ['carrera', 'materias'],
+      campos: [
+        { id: 'carrera', label: 'Carrera', tipo: 'text', placeholder: 'Ej: Licenciatura en Bioquímica', obligatorio: true },
+        { id: 'materias', label: 'Asignaturas', tipo: 'textarea', placeholder: 'Liste las asignaturas (una por línea)', obligatorio: true },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        return 'Me dirijo a usted a fin de solicitar la extensión de mi condición de alumno/a regular en las asignaturas que se detallan a continuación, correspondientes a la carrera de ' + (d.carrera || '[carrera]') + ':\n\n' + (formatearListaAsignaturas(d.materias) || '[listado de asignaturas]') + '\n' + parrafoMotivo(d.motivo) + '\nQuedo a disposición para cualquier consulta o requerimiento adicional.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Solicitud de Licencia': {
+      obligatorios: ['tipoLicencia', 'desde', 'hasta'],
+      campos: [
+        { id: 'tipoLicencia', label: 'Tipo de licencia', tipo: 'text', placeholder: 'Ej: Licencia ordinaria / Estudio / Médica', obligatorio: true },
+        { id: 'desde', label: 'Fecha desde', tipo: 'date', obligatorio: true },
+        { id: 'hasta', label: 'Fecha hasta', tipo: 'date', obligatorio: true },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        return 'Me dirijo a usted a fin de solicitar ' + (d.tipoLicencia || '[tipo de licencia]') + ' por el período comprendido entre el ' + formatearFecha(d.desde) + ' y el ' + formatearFecha(d.hasta) + ' inclusive.' + parrafoMotivo(d.motivo) + '\nQuedo a disposición para cualquier consulta.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Inscripción a Concurso Docente': {
+      obligatorios: ['cargo', 'catedra', 'area'],
+      conDocumentacion: true,
+      campos: [
+        { id: 'cargo', label: 'Cargo al que aspira', tipo: 'text', placeholder: 'Ej: Ayudante de Segunda', obligatorio: true },
+        { id: 'catedra', label: 'Cátedra / Asignatura', tipo: 'text', placeholder: 'Ej: Química Biológica', obligatorio: true },
+        { id: 'area', label: 'Área / Departamento', tipo: 'text', placeholder: 'Ej: Área de Ciencias Biológicas', obligatorio: true }
+      ],
+      generar: function (d) {
+        return 'Me dirijo a usted a fin de solicitar mi inscripción al concurso para cubrir el cargo de ' + (d.cargo || '[cargo]') + ' correspondiente a la cátedra de ' + (d.catedra || '[cátedra]') + ', del área de ' + (d.area || '[área]') + ', de acuerdo a lo establecido en la convocatoria vigente.\n\nDeclaro cumplir con los requisitos exigidos en las bases y condiciones del concurso.' + parrafoDocumentacion(true) + '\nQuedo a disposición para cualquier consulta o requerimiento adicional.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Inscripción a Concurso Alumno': {
+      obligatorios: ['cargo', 'catedra', 'area'],
+      conDocumentacion: true,
+      campos: [
+        { id: 'cargo', label: 'Cargo / Función', tipo: 'text', placeholder: 'Ej: Pasante / Adscripto', obligatorio: true },
+        { id: 'catedra', label: 'Cátedra / Sector', tipo: 'text', placeholder: 'Ej: Laboratorio de Inmunología', obligatorio: true },
+        { id: 'area', label: 'Área / Departamento', tipo: 'text', placeholder: 'Ej: Área de Ciencias Biológicas', obligatorio: true }
+      ],
+      generar: function (d) {
+        return 'Me dirijo a usted a fin de solicitar mi inscripción al concurso para cubrir el cargo de ' + (d.cargo || '[cargo]') + ' correspondiente a ' + (d.catedra || '[cátedra/sector]') + ', del área de ' + (d.area || '[área]') + ', de acuerdo a lo establecido en la convocatoria vigente.\n\nDeclaro cumplir con los requisitos exigidos en las bases y condiciones del concurso.' + parrafoDocumentacion(true) + '\nQuedo a disposición para cualquier consulta o requerimiento adicional.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Solicitud de Plan de Estudios y Programas': {
+      obligatorios: ['carrera'],
+      campos: [
+        { id: 'carrera', label: 'Carrera', tipo: 'text', placeholder: 'Ej: Licenciatura en Bioquímica', obligatorio: true },
+        { id: 'materias', label: 'Asignaturas solicitadas (opcional)', tipo: 'textarea', placeholder: 'Liste las asignaturas (una por línea). Si se omite, se solicitarán los planes de toda la carrera.' }
+      ],
+      generar: function (d) {
+        const tieneMaterias = d.materias && d.materias.trim();
+        const listado = tieneMaterias
+          ? 'de las asignaturas de la carrera de ' + (d.carrera || '[carrera]') + ' que se detallan a continuación:\n\n' + formatearListaAsignaturas(d.materias) + '\n'
+          : 'correspondientes a la totalidad del plan de estudios de la carrera de ' + (d.carrera || '[carrera]');
+        return 'Me dirijo a usted a fin de solicitar la entrega de los Planes de Estudios y Programas analíticos ' + listado + '.\n\nDicha documentación será utilizada con fines académicos/personales.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    }
+  };
+
+  /** Las opciones del selector de asuntos, en orden. */
+  const ASUNTO_KEYS = Object.keys(ASUNTOS_CONFIG);
+
+  const STORAGE_KEY = 'fbcb-sender-profile';
+  const STORAGE_VERSION = 1;
+
+  /* ===================================================================
+   * MÓDULO: LÓGICA PURA (validación, formateo, generación)
+   * =================================================================== */
+
+  function fechaHoy() {
+    const d = new Date();
+    return d.getDate() + ' de ' + MESES[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+
+  function formatearFecha(fechaStr) {
+    if (!fechaStr) return '[fecha]';
+    const d = new Date(fechaStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return '[fecha]';
+    return d.getDate() + ' de ' + MESES[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+
+  function parrafoMotivo(motivo) {
+    if (!motivo || !motivo.trim()) return '';
+    return '\nLa presente solicitud se funda en los siguientes motivos: ' + motivo.trim() + '.\n';
+  }
+
+  function parrafoDocumentacion(incluir) {
+    if (!incluir) return '';
+    return '\nAdjunto la documentación respaldatoria correspondiente y quedo a disposición para cualquier consulta o requerimiento adicional.\n';
+  }
+
+  function formatearListaAsignaturas(texto) {
+    if (!texto || !texto.trim()) return '';
+    const lineas = texto.split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 0; });
+    if (lineas.length === 0) return '';
+    return lineas.map(function (l) { return '• ' + l; }).join('\n');
+  }
+
+  function validarPerfil(v) { return PERFILES.indexOf(v) !== -1; }
+  function validarNombre(v) { return v && v.trim().length >= 3; }
+  function validarDNI(v) { return RE_DNI.test(v.trim()); }
+  function validarEmail(v) { return RE_EMAIL.test(v.trim()); }
+  function validarTelefono(v) { return !v || v.trim() === '' || RE_TEL.test(v.trim()); }
+
+  /** Busca una autoridad por id. Devuelve undefined si no existe. */
+  function findAuthority(id) {
+    return AUTHORITIES.find(function (a) { return a.id === id; });
+  }
+
+  /** Genera el texto del cuerpo para el asunto seleccionado. */
+  function generateCuerpo(asunto, datos) {
+    const config = ASUNTOS_CONFIG[asunto];
+    if (!config) return '';
+    return config.generar(datos);
+  }
+
+  /** Construye el HTML del destinatario a partir de la autoridad. */
+  function renderDestinatarioHtml(authority) {
+    if (!authority) return '<span class="placeholder">[Seleccione un destinatario]</span>';
+    const unidad = authority.ambito === 'FBCB'
+      ? 'Facultad de Bioquímica y Ciencias Biológicas'
+      : 'Rectorado — Universidad Nacional del Litoral';
+    return authority.tratamiento + ' de la<br>' + unidad + '<br><strong>' + authority.nombre + '</strong><br>S / D';
+  }
+
+  /** Deriva el nombre de archivo sugerido. */
+  function generarNombreArchivo(asunto, nombre) {
+    const asuntoSanitizado = (asunto || '').replace(/[\/\\:*?"<>|]+/g, '').replace(/\s+/g, '_').trim();
+    const nombreSanitizado = (nombre || '').trim().replace(/[\/\\:*?"<>|]+/g, '').replace(/\s+/g, '_');
+    return 'Nota_' + asuntoSanitizado + '_' + nombreSanitizado + '.pdf';
+  }
+
+  /* ===================================================================
+   * MÓDULO: PERSISTENCIA (localStorage v1)
+   * =================================================================== */
+
+  function loadProfile() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || data.v !== STORAGE_VERSION) return null;
+      if (!validarPerfil(data.tipo) || !validarNombre(data.nombre) || !validarDNI(data.dni) || !validarEmail(data.email) || !validarTelefono(data.telefono)) {
+        return null;
+      }
+      return data;
+    } catch (e) {
+      return null; // localStorage corrupto o indisponible: se ignora sin error JS
+    }
+  }
+
+  function saveProfile(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      // Privacidad / cuota llena: la app sigue funcionando sin persistencia
+    }
+  }
+
+  /* ===================================================================
+   * MÓDULO: CONTROLADORES UI
+   * =================================================================== */
+
+  const $ = function (id) { return document.getElementById(id); };
+
+  const els = {
+    perfil: $('perfil'),
+    destinatario: $('destinatario'),
+    asunto: $('asunto'),
+    camposDinamicos: $('campos-dinamicos'),
+    nombre: $('nombre'),
+    dni: $('dni'),
+    email: $('email'),
+    telefono: $('telefono'),
+    archivoNombre: $('archivo-nombre'),
+    btnDescargar: $('btnDescargar'),
+    btnCompartir: $('btnCompartir'),
+    nota: $('nota'),
+    vFecha: $('v-fecha'),
+    vDestinatario: $('v-destinatario'),
+    vAsunto: $('v-asunto'),
+    vContenido: $('v-contenido'),
+    vCondicion: $('v-condicion'),
+    vNombre: $('v-nombre'),
+    vDni: $('v-dni'),
+    vEmail: $('v-email'),
+    vTelefono: $('v-telefono'),
+    modal: $('modalCompartir'),
+    btnCompartirNativo: $('btnCompartirNativo'),
+    btnDescargarDesdeModal: $('btnDescargarDesdeModal'),
+    btnCerrarModal: $('btnCerrarModal'),
+    errorLive: $('error-live')
+  };
+
+  let estado = {
+    perfil: '',
+    destinatarioId: '',
+    asunto: '',
+    campos: {},
+    nombre: '',
+    dni: '',
+    email: '',
+    telefono: '',
+    fecha: fechaHoy(),
+    // Copia editable de la vista previa (sincronizada en blur)
+    prev: {
+      fecha: null,
+      destinatario: null,
+      asunto: null,
+      cuerpo: null,
+      condicion: null,
+      nombre: null,
+      dni: null,
+      email: null,
+      telefono: null
+    }
+  };
+
+  function renderAuthoritySelector() {
+    const fbcb = AUTHORITIES.filter(function (a) { return a.ambito === 'FBCB'; });
+    const unl = AUTHORITIES.filter(function (a) { return a.ambito !== 'FBCB'; });
+
+    const optDefault = document.createElement('option');
+    optDefault.value = '';
+    optDefault.textContent = '-- Seleccione una autoridad --';
+    els.destinatario.appendChild(optDefault);
+
+    function addGroup(label, list) {
+      const g = document.createElement('optgroup');
+      g.label = label;
+      list.forEach(function (a) {
+        const o = document.createElement('option');
+        o.value = a.id;
+        o.textContent = a.nombre + ' — ' + a.cargo;
+        g.appendChild(o);
+      });
+      els.destinatario.appendChild(g);
+    }
+
+    addGroup('Facultad de Bioquímica y Ciencias Biológicas', fbcb);
+    addGroup('Rectorado — Universidad Nacional del Litoral', unl);
+  }
+
+  function renderSubjectSelector() {
+    ASUNTO_KEYS.forEach(function (k) {
+      const o = document.createElement('option');
+      o.value = k;
+      o.textContent = k;
+      els.asunto.appendChild(o);
+    });
+  }
+
+  function renderCamposDinamicos() {
+    els.camposDinamicos.innerHTML = '';
+    const config = ASUNTOS_CONFIG[estado.asunto];
+    if (!config) return;
+
+    const seccion = document.createElement('div');
+    seccion.className = 'seccion';
+    const titulo = document.createElement('div');
+    titulo.className = 'seccion-titulo';
+    titulo.textContent = 'Datos específicos de la solicitud';
+    seccion.appendChild(titulo);
+
+    config.campos.forEach(function (c) {
+      const label = document.createElement('label');
+      label.innerHTML = c.label + (c.obligatorio ? ' <span class="req">*</span>' : '');
+      label.setAttribute('for', 'dyn-' + c.id);
+
+      let input;
+      if (c.tipo === 'textarea') {
+        input = document.createElement('textarea');
+      } else {
+        input = document.createElement('input');
+        input.type = c.tipo;
+        if (c.tipo === 'date') input.max = '';
+      }
+      input.id = 'dyn-' + c.id;
+      input.placeholder = c.placeholder || '';
+      input.addEventListener('input', actualizar);
+      if (estado.campos[c.id]) input.value = estado.campos[c.id];
+
+      seccion.appendChild(label);
+      seccion.appendChild(input);
+    });
+
+    els.camposDinamicos.appendChild(seccion);
+  }
+
+  function collectCampos() {
+    const config = ASUNTOS_CONFIG[estado.asunto];
+    if (!config) return {};
+    const datos = {};
+    config.campos.forEach(function (c) {
+      const el = $('dyn-' + c.id);
+      datos[c.id] = el ? el.value.trim() : '';
+    });
+    return datos;
+  }
+
+  function actualizar() {
+    estado.perfil = els.perfil.value;
+    estado.destinatarioId = els.destinatario.value;
+    estado.nombre = els.nombre.value;
+    estado.dni = els.dni.value;
+    estado.email = els.email.value;
+    estado.telefono = els.telefono.value;
+
+    // Cambio de asunto → re-render de campos dinámicos
+    const asuntoAnterior = estado.asunto;
+    estado.asunto = els.asunto.value;
+    if (asuntoAnterior !== estado.asunto) {
+      estado.campos = {};
+      renderCamposDinamicos();
+    }
+    estado.campos = collectCampos();
+
+    renderPreview();
+  }
+
+  function renderPreview() {
+    const authority = findAuthority(estado.destinatarioId);
+
+    els.vFecha.textContent = estado.fecha || fechaHoy();
+    els.vDestinatario.innerHTML = renderDestinatarioHtml(authority);
+    els.vAsunto.textContent = estado.asunto || '[Seleccione un asunto]';
+
+    if (estado.asunto && ASUNTOS_CONFIG[estado.asunto]) {
+      els.vContenido.textContent = generateCuerpo(estado.asunto, estado.campos);
+    } else {
+      els.vContenido.innerHTML = '<span class="placeholder">[Seleccione un asunto para generar el contenido]</span>';
+    }
+
+    els.vCondicion.textContent = CONDICION_PERFIL[estado.perfil] || '';
+    els.vNombre.textContent = estado.nombre || '[Nombre completo]';
+    els.vDni.textContent = estado.dni ? 'DNI: ' + estado.dni : 'DNI: [---]';
+    els.vEmail.textContent = estado.email ? 'Email: ' + estado.email : 'Email: [---]';
+    els.vTelefono.textContent = estado.telefono ? 'Tel.: ' + estado.telefono : 'Tel.: [---]';
+
+    actualizarNombreArchivo();
+  }
+
+  function actualizarNombreArchivo() {
+    const sugerido = generarNombreArchivo(estado.asunto, estado.nombre);
+    if (!els.archivoNombre.value || !els.archivoNombre.dataset.auto) {
+      els.archivoNombre.value = sugerido;
+      els.archivoNombre.dataset.auto = '1';
+    }
+  }
+
+  /** Captura las ediciones manuales de la vista previa (contenteditable) en el estado de exportación. */
+  function syncPreviewEdits() {
+    estado.prev.fecha = els.vFecha.textContent;
+    estado.prev.destinatario = els.vDestinatario.innerHTML;
+    estado.prev.asunto = els.vAsunto.textContent;
+    estado.prev.cuerpo = els.vContenido.innerHTML;
+    estado.prev.condicion = els.vCondicion.textContent;
+    estado.prev.nombre = els.vNombre.textContent;
+    estado.prev.dni = els.vDni.textContent;
+    estado.prev.email = els.vEmail.textContent;
+    estado.prev.telefono = els.vTelefono.textContent;
+  }
+
+  /* ===================================================================
+   * MÓDULO: VALIDACIÓN Y ERRORES
+   * =================================================================== */
+
+  function mostrarError(msg) {
+    els.errorLive.textContent = msg || '';
+    els.errorLive.style.display = msg ? 'block' : 'none';
+  }
+
+  function validarFormulario() {
+    const errores = [];
+
+    if (!validarPerfil(estado.perfil)) errores.push('Seleccione un perfil.');
+    if (!validarNombre(estado.nombre)) errores.push('Ingrese el nombre completo.');
+    if (!validarDNI(estado.dni)) errores.push('El DNI debe tener 7 u 8 dígitos.');
+    if (!validarEmail(estado.email)) errores.push('Ingrese un email válido.');
+    if (!validarTelefono(estado.telefono)) errores.push('El teléfono no es válido.');
+    if (!estado.destinatarioId) errores.push('Seleccione un destinatario.');
+    if (!estado.asunto) errores.push('Seleccione un asunto.');
+
+    const config = ASUNTOS_CONFIG[estado.asunto];
+    if (config) {
+      config.obligatorios.forEach(function (campoId) {
+        const v = estado.campos[campoId];
+        if (!v || !v.trim()) {
+          const campo = config.campos.find(function (c) { return c.id === campoId; });
+          errores.push('Complete: ' + (campo ? campo.label : campoId) + '.');
+        }
+      });
+    }
+
+    mostrarError(errores.length ? errores.join(' ') : '');
+    return errores.length === 0;
+  }
+
+  /* ===================================================================
+   * MÓDULO: EXPORTACIÓN (PDF + COMPARTIR)
+   * =================================================================== */
+
+  function estadoParaExportar() {
+    syncPreviewEdits();
+    const authority = findAuthority(estado.destinatarioId);
+
+    /** El contenido final: usa la edición manual si existe, sino el texto generado. */
+    const cuerpoFinal = estado.prev.cuerpo !== null
+      ? estado.prev.cuerpo
+      : (estado.asunto && ASUNTOS_CONFIG[estado.asunto] ? generateCuerpo(estado.asunto, estado.campos) : '');
+
+    return {
+      fecha: estado.prev.fecha !== null ? estado.prev.fecha : (estado.fecha || fechaHoy()),
+      destinatarioHtml: estado.prev.destinatario !== null
+        ? estado.prev.destinatario
+        : renderDestinatarioHtml(authority),
+      asunto: estado.prev.asunto !== null ? estado.prev.asunto : (estado.asunto || ''),
+      cuerpo: cuerpoFinal,
+      condicion: estado.prev.condicion !== null ? estado.prev.condicion : (CONDICION_PERFIL[estado.perfil] || ''),
+      nombre: estado.prev.nombre !== null ? estado.prev.nombre : (estado.nombre || ''),
+      dni: estado.prev.dni !== null ? estado.prev.dni : (estado.dni ? 'DNI: ' + estado.dni : ''),
+      email: estado.prev.email !== null ? estado.prev.email : (estado.email ? 'Email: ' + estado.email : ''),
+      telefono: estado.prev.telefono !== null ? estado.prev.telefono : (estado.telefono ? 'Tel.: ' + estado.telefono : '')
+    };
+  }
+
+  function aplicarContenidoExport(exportState) {
+    // Inyecta el contenido final (con ediciones) en la nota ANTES de imprimir
+    els.vFecha.textContent = exportState.fecha;
+    els.vDestinatario.innerHTML = exportState.destinatarioHtml;
+    els.vAsunto.textContent = exportState.asunto;
+    els.vContenido.innerHTML = exportState.cuerpo;
+    els.vCondicion.textContent = exportState.condicion;
+    els.vNombre.textContent = exportState.nombre;
+    els.vDni.textContent = exportState.dni;
+    els.vEmail.textContent = exportState.email;
+    els.vTelefono.textContent = exportState.telefono;
+  }
+
+  function obtenerNombreArchivo() {
+    const nombre = (els.archivoNombre.value || '').trim();
+    return nombre.endsWith('.pdf') ? nombre : nombre + '.pdf';
+  }
+
+  function generarPDF(opciones) {
+    // opciones: { save: bool, share: bool }
+    if (!validarFormulario()) return Promise.resolve(false);
+    if (typeof html2pdf === 'undefined') {
+      mostrarError('Error: la librería de PDF no se cargó correctamente. Verifique que lib/html2pdf.bundle.min.js exista.');
+      return Promise.resolve(false);
+    }
+
+    const exportState = estadoParaExportar();
+    aplicarContenidoExport(exportState);
+
+    // Modo PDF: ocultar cromo de UI, recortar al contenido de la nota
+    document.body.classList.add('pdf-render');
+    els.nota.setAttribute('contenteditable', 'false');
+
+    const opt = {
+      margin: 20,
+      filename: obtenerNombreArchivo(),
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    };
+
+    const worker = html2pdf().set(opt).from(els.nota);
+
+    const done = function () {
+      document.body.classList.remove('pdf-render');
+      els.nota.setAttribute('contenteditable', 'true');
+      renderPreview(); // restaurar vista viva
+    };
+
+    if (opciones.share) {
+      return worker.output('blob').then(function (blob) {
+        done();
+        return blob;
+      });
+    }
+
+    return worker.save().then(function () {
+      done();
+      return true;
+    }).catch(function (err) {
+      done();
+      mostrarError('No se pudo generar el PDF. Intente nuevamente.');
+      console.error('Error generando PDF:', err);
+      return false;
+    });
+  }
+
+  function descargarPDF() {
+    return generarPDF({ save: true, share: false });
+  }
+
+  function abrirModalCompartir() {
+    if (!validarFormulario()) return;
+    els.modal.classList.add('active');
+    const primero = els.modal.querySelector('button');
+    if (primero) primero.focus();
+  }
+
+  function cerrarModalCompartir() {
+    els.modal.classList.remove('active');
+    els.btnCompartir.focus();
+  }
+
+  /** Dispara el share nativo; si no está disponible o falla, cae a descarga. */
+  async function compartirNativo() {
+    if (!validarFormulario()) return;
+    const blob = await generarPDF({ save: false, share: true });
+    if (!blob) return;
+
+    const nombre = obtenerNombreArchivo();
+    const file = new File([blob], nombre, { type: 'application/pdf' });
+
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: nombre });
+      } else {
+        descargarBlob(blob, nombre);
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        // el usuario canceló el share: silencioso
+      } else {
+        descargarBlob(blob, nombre);
+      }
+    } finally {
+      cerrarModalCompartir();
+    }
+  }
+
+  function descargarBlob(blob, nombre) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  /* ===================================================================
+   * MÓDULO: INICIALIZACIÓN Y EVENTOS
+   * =================================================================== */
+
+  function restaurarPerfil() {
+    const perfil = loadProfile();
+    if (!perfil) return;
+    estado.perfil = perfil.tipo;
+    els.perfil.value = perfil.tipo;
+    estado.nombre = perfil.nombre;
+    els.nombre.value = perfil.nombre;
+    estado.dni = perfil.dni;
+    els.dni.value = perfil.dni;
+    estado.email = perfil.email;
+    els.email.value = perfil.email;
+    estado.telefono = perfil.telefono || '';
+    els.telefono.value = estado.telefono;
+  }
+
+  function guardarPerfilAutosave() {
+    if (!validarPerfil(estado.perfil) || !validarNombre(estado.nombre) || !validarDNI(estado.dni) || !validarEmail(estado.email)) {
+      return;
+    }
+    saveProfile({
+      v: STORAGE_VERSION,
+      tipo: estado.perfil,
+      nombre: estado.nombre.trim(),
+      dni: estado.dni.trim(),
+      email: estado.email.trim(),
+      telefono: estado.telefono.trim()
+    });
+  }
+
+  function init() {
+    renderAuthoritySelector();
+    renderSubjectSelector();
+    restaurarPerfil();
+
+    // Fecha por defecto = hoy (editable en la vista previa)
+    estado.fecha = fechaHoy();
+
+    // Eventos del formulario
+    ['perfil', 'destinatario', 'asunto', 'nombre', 'dni', 'email', 'telefono'].forEach(function (id) {
+      $(id).addEventListener('input', actualizar);
+      $(id).addEventListener('change', actualizar);
+    });
+
+    // Autosave de perfil en blur (evita escribir en cada tecla)
+    ['nombre', 'dni', 'email', 'telefono'].forEach(function (id) {
+      $(id).addEventListener('blur', function () {
+        actualizar();
+        guardarPerfilAutosave();
+      });
+    });
+
+    // El nombre de archivo es editable; al editarlo manualmente se deja de autogenerar
+    els.archivoNombre.addEventListener('focus', function () {
+      if (els.archivoNombre.dataset.auto) delete els.archivoNombre.dataset.auto;
+    });
+
+    // Ediciones manuales de la nota → estado de exportación
+    els.nota.addEventListener('input', syncPreviewEdits);
+    els.nota.addEventListener('blur', syncPreviewEdits);
+
+    // Botones
+    els.btnDescargar.addEventListener('click', descargarPDF);
+    els.btnCompartir.addEventListener('click', abrirModalCompartir);
+    els.btnCompartirNativo.addEventListener('click', compartirNativo);
+    els.btnDescargarDesdeModal.addEventListener('click', function () {
+      cerrarModalCompartir();
+      descargarPDF();
+    });
+    els.btnCerrarModal.addEventListener('click', cerrarModalCompartir);
+
+    // Cerrar modal con click fuera / Escape
+    els.modal.addEventListener('click', function (e) {
+      if (e.target === els.modal) cerrarModalCompartir();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && els.modal.classList.contains('active')) {
+        cerrarModalCompartir();
+      }
+    });
+
+    actualizar();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
