@@ -527,12 +527,48 @@
     { id: 'sec-adm-pre-unl', nombre: 'CPN Germán Bonino', cargo: 'Secretario de Administración y Gestión Presupuestaria', tratamiento: 'Señor Secretario de Administración y Gestión Presupuestaria', ambito: 'Rectorado UNL' }
   ];
 
+  /**
+   * Oferta académica oficial de la FBCB-UNL.
+   * Fuente: https://www.fbcb.unl.edu.ar/academica/ (Grado, Pregrado y Posgrado).
+   * Grado: 8 carreras. Pregrado: 3 tecnicaturas. Posgrado: doctorados, maestrías y especializaciones.
+   */
+  const CARRERAS_FBCB = [
+    // Pregrado
+    'Tecnicatura en Administración de Salud',
+    'Tecnicatura en Higiene y Seguridad en el Trabajo',
+    'Tecnicatura Universitaria en Salud Ambiental',
+    // Grado
+    'Bioquímica',
+    'Licenciatura en Biotecnología',
+    'Licenciatura en Nutrición',
+    'Licenciatura en Saneamiento Ambiental',
+    'Licenciatura en Higiene y Seguridad en el Trabajo',
+    'Licenciatura en Administración de la Salud',
+    'Licenciatura en Terapia Ocupacional',
+    'Licenciatura en Ciencias y Tecnología de los Alimentos',
+    // Posgrado — Doctorados
+    'Doctorado en Ciencias Biológicas',
+    'Doctorado en Física',
+    'Doctorado en Educación en Ciencias Experimentales',
+    'Doctorado en Bioquímica y Biología Aplicada',
+    // Posgrado — Maestrías
+    'Maestría en Didáctica de las Ciencias Experimentales',
+    'Maestría en Salud Ambiental',
+    'Maestría en Física',
+    // Posgrado — Especializaciones
+    'Especialización en Ergonomía',
+    'Especialización en Nutrición y Deporte',
+    'Especialización en Bacteriología Clínica',
+    'Especialización en Vinculación y Gestión Tecnológica'
+  ];
+
   /** 6 asuntos con plantillas y campos dinámicos (formato AppME 2.0). */
   const ASUNTOS_CONFIG = {
     'Inscripción Fuera de Término': {
+      perfiles: ['Alumno'],
       obligatorios: ['carrera', 'materias'],
       campos: [
-        { id: 'carrera', label: 'Carrera', tipo: 'text', placeholder: 'Ej: Licenciatura en Bioquímica', obligatorio: true },
+        { id: 'carrera', label: 'Carrera', tipo: 'select', opciones: CARRERAS_FBCB, placeholder: 'Seleccione la carrera', obligatorio: true },
         { id: 'materias', label: 'Asignaturas', tipo: 'textarea', placeholder: 'Liste las asignaturas (una por línea)', obligatorio: true },
         { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
       ],
@@ -541,9 +577,10 @@
       }
     },
     'Extensión de Regularidad': {
+      perfiles: ['Alumno'],
       obligatorios: ['carrera', 'materias'],
       campos: [
-        { id: 'carrera', label: 'Carrera', tipo: 'text', placeholder: 'Ej: Licenciatura en Bioquímica', obligatorio: true },
+        { id: 'carrera', label: 'Carrera', tipo: 'select', opciones: CARRERAS_FBCB, placeholder: 'Seleccione la carrera', obligatorio: true },
         { id: 'materias', label: 'Asignaturas', tipo: 'textarea', placeholder: 'Liste las asignaturas (una por línea)', obligatorio: true },
         { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
       ],
@@ -552,6 +589,7 @@
       }
     },
     'Solicitud de Licencia': {
+      perfiles: ['Docente', 'Personal'],
       obligatorios: ['tipoLicencia', 'desde', 'hasta'],
       campos: [
         { id: 'tipoLicencia', label: 'Tipo de licencia', tipo: 'text', placeholder: 'Ej: Licencia ordinaria / Estudio / Médica', obligatorio: true },
@@ -564,6 +602,7 @@
       }
     },
     'Inscripción a Concurso Docente': {
+      perfiles: ['Docente'],
       obligatorios: ['cargo', 'catedra', 'area'],
       conDocumentacion: true,
       campos: [
@@ -576,6 +615,7 @@
       }
     },
     'Inscripción a Concurso Alumno': {
+      perfiles: ['Alumno'],
       obligatorios: ['cargo', 'catedra', 'area'],
       conDocumentacion: true,
       campos: [
@@ -588,9 +628,10 @@
       }
     },
     'Solicitud de Plan de Estudios y Programas': {
+      perfiles: ['Alumno'],
       obligatorios: ['carrera'],
       campos: [
-        { id: 'carrera', label: 'Carrera', tipo: 'text', placeholder: 'Ej: Licenciatura en Bioquímica', obligatorio: true },
+        { id: 'carrera', label: 'Carrera', tipo: 'select', opciones: CARRERAS_FBCB, placeholder: 'Seleccione la carrera', obligatorio: true },
         { id: 'materias', label: 'Asignaturas solicitadas (opcional)', tipo: 'textarea', placeholder: 'Liste las asignaturas (una por línea). Si se omite, se solicitarán los planes de toda la carrera.' }
       ],
       generar: function (d) {
@@ -600,11 +641,118 @@
           : 'correspondientes a la totalidad del plan de estudios de la carrera de ' + (d.carrera || '[carrera]');
         return 'Me dirijo a usted a fin de solicitar la entrega de los Planes de Estudios y Programas analíticos ' + listado + '.\n\nDicha documentación será utilizada con fines académicos/personales.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
       }
+    },
+    'Homologación de Materias / Equivalencias': {
+      perfiles: ['Alumno'],
+      obligatorios: ['carrera', 'materias', 'origen'],
+      campos: [
+        { id: 'carrera', label: 'Carrera de destino', tipo: 'select', opciones: CARRERAS_FBCB, placeholder: 'Seleccione la carrera', obligatorio: true },
+        { id: 'origen', label: 'Origen de los estudios (institución / carrera)', tipo: 'text', placeholder: 'Ej: Facultad de Ciencias Económicas (UNL) / UTN / otra carrera', obligatorio: true },
+        { id: 'materias', label: 'Asignaturas a reconocer', tipo: 'textarea', placeholder: 'Liste las asignaturas (una por línea)', obligatorio: true },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        return 'Me dirijo a usted a fin de solicitar la homologación de las asignaturas que se detallan a continuación, aprobadas en ' + (d.origen || '[origen]') + ', para su reconocimiento como equivalentes en la carrera de ' + (d.carrera || '[carrera de destino]') + ':\n\n' + (formatearListaAsignaturas(d.materias) || '[listado de asignaturas]') + '\n' + parrafoMotivo(d.motivo) + 'A tal efecto, acompaño la documentación respaldatoria correspondiente y quedo a disposición para ampliar cualquier información que se considere necesaria.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Inscripción a Carrera / Posgrado': {
+      perfiles: ['Alumno'],
+      obligatorios: ['carrera', 'nivel'],
+      campos: [
+        { id: 'carrera', label: 'Carrera / Posgrado', tipo: 'text', placeholder: 'Ej: Maestría en Ciencias Biológicas / Doctorado', obligatorio: true },
+        { id: 'nivel', label: 'Nivel', tipo: 'text', placeholder: 'Ej: Grado / Especialización / Maestría / Doctorado', obligatorio: true },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        return 'Me dirijo a usted a fin de solicitar mi inscripción a ' + (d.carrera || '[carrera/posgrado]') + ' correspondiente al nivel de ' + (d.nivel || '[nivel]') + '.' + parrafoMotivo(d.motivo) + 'A tal efecto, acompaño la documentación requerida por la normativa vigente y quedo a disposición para cualquier consulta o requerimiento adicional.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Rectificación de Acta': {
+      perfiles: ['Alumno', 'Docente'],
+      obligatorios: ['asignatura', 'acta', 'dato'],
+      campos: [
+        { id: 'asignatura', label: 'Asignatura', tipo: 'text', placeholder: 'Ej: Química General', obligatorio: true },
+        { id: 'acta', label: 'Acta / Fecha correspondiente', tipo: 'text', placeholder: 'Ej: Acta del 12/03/2026' , obligatorio: true },
+        { id: 'dato', label: 'Dato a rectificar', tipo: 'textarea', placeholder: 'Describa el dato erróneo y el dato correcto', obligatorio: true },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        return 'Me dirijo a usted a fin de solicitar la rectificación del acta correspondiente a la asignatura ' + (d.asignatura || '[asignatura]') + ' (' + (d.acta || '[acta/fecha]') + '), por el siguiente detalle:\n\n' + (d.dato || '[dato a rectificar]') + '\n' + parrafoMotivo(d.motivo) + 'Agradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Cursado Condicional de Correlativas': {
+      perfiles: ['Alumno'],
+      obligatorios: ['carrera', 'materias'],
+      campos: [
+        { id: 'carrera', label: 'Carrera', tipo: 'select', opciones: CARRERAS_FBCB, placeholder: 'Seleccione la carrera', obligatorio: true },
+        { id: 'materias', label: 'Asignaturas a cursar', tipo: 'textarea', placeholder: 'Liste las asignaturas que desea cursar de manera condicional (una por línea)', obligatorio: true },
+        { id: 'correlativas', label: 'Correlativas pendientes', tipo: 'textarea', placeholder: 'Liste las materias correlativas que le faltan aprobar (una por línea)' },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        const corr = d.correlativas && d.correlativas.trim()
+          ? ', adeudando las correlativas que se detallan: ' + formatearListaAsignaturas(d.correlativas)
+          : '';
+        return 'Me dirijo a usted a fin de solicitar el cursado en condición de alumno/a condicional de las asignaturas de la carrera de ' + (d.carrera || '[carrera]') + ' que se detallan a continuación:\n\n' + (formatearListaAsignaturas(d.materias) || '[listado de asignaturas]') + corr + '\n' + parrafoMotivo(d.motivo) + 'Quedo a disposición para cualquier consulta o requerimiento adicional.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Solicitud de Cargo Docente': {
+      perfiles: ['Docente'],
+      obligatorios: ['cargo', 'catedra'],
+      campos: [
+        { id: 'cargo', label: 'Cargo solicitado', tipo: 'text', placeholder: 'Ej: Profesor Adjunto / JTP / Ayudante de Primera', obligatorio: true },
+        { id: 'catedra', label: 'Cátedra / Asignatura', tipo: 'text', placeholder: 'Ej: Química Biológica', obligatorio: true },
+        { id: 'area', label: 'Área / Departamento (opcional)', tipo: 'text', placeholder: 'Ej: Área de Ciencias Biológicas' },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        const area = d.area && d.area.trim() ? ', del área de ' + d.area.trim() : '';
+        return 'Me dirijo a usted a fin de solicitar el cargo de ' + (d.cargo || '[cargo]') + ' correspondiente a la cátedra de ' + (d.catedra || '[cátedra]') + area + '.' + parrafoMotivo(d.motivo) + 'Declaro cumplir con los requisitos y condiciones exigidos para el desempeño del cargo.' + parrafoDocumentacion(true) + '\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
+    },
+    'Renuncia a Cargo': {
+      perfiles: ['Docente', 'Personal'],
+      obligatorios: ['cargo', 'desde'],
+      campos: [
+        { id: 'cargo', label: 'Cargo que renuncia', tipo: 'text', placeholder: 'Ej: Profesor Adjunto', obligatorio: true },
+        { id: 'catedra', label: 'Cátedra / Área (opcional)', tipo: 'text', placeholder: 'Ej: Química Biológica' },
+        { id: 'desde', label: 'Fecha de efectivización', tipo: 'date', obligatorio: true },
+        { id: 'motivo', label: 'Motivo de la renuncia (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        const cat = d.catedra && d.catedra.trim() ? ' correspondiente a ' + d.catedra.trim() : '';
+        return 'Me dirijo a usted a fin de presentar mi renuncia al cargo de ' + (d.cargo || '[cargo]') + cat + ', la que tendrá efecto a partir del ' + formatearFecha(d.desde) + ' inclusive.' + parrafoMotivo(d.motivo) + 'Agradeciendo la confianza depositada durante mi desempeño, saludo a usted atentamente.';
+      }
+    },
+    'Trabajo Final / Tesina / Tesis': {
+      perfiles: ['Alumno'],
+      obligatorios: ['carrera', 'tipo'],
+      campos: [
+        { id: 'carrera', label: 'Carrera', tipo: 'select', opciones: CARRERAS_FBCB, placeholder: 'Seleccione la carrera', obligatorio: true },
+        { id: 'tipo', label: 'Tipo de trabajo', tipo: 'text', placeholder: 'Ej: Trabajo final de grado / Tesina / Defensa de tesis', obligatorio: true },
+        { id: 'titulo', label: 'Título del trabajo (opcional)', tipo: 'text', placeholder: 'Título del trabajo a presentar/defender' },
+        { id: 'motivo', label: 'Motivo de la solicitud (opcional)', tipo: 'textarea', placeholder: 'Explique brevemente los motivos...' }
+      ],
+      generar: function (d) {
+        const titulo = d.titulo && d.titulo.trim() ? ' denominado "' + d.titulo.trim() + '"' : '';
+        return 'Me dirijo a usted a fin de solicitar las gestiones correspondientes para la presentación/defensa de mi ' + (d.tipo || '[tipo de trabajo]') + titulo + ', requisito para la culminación de la carrera de ' + (d.carrera || '[carrera]') + '.' + parrafoMotivo(d.motivo) + 'A tal efecto, acompaño la documentación requerida y quedo a disposición para cualquier consulta.\n\nAgradeciendo anticipadamente su atención, saludo a usted atentamente.';
+      }
     }
   };
 
   /** Las opciones del selector de asuntos, en orden. */
   const ASUNTO_KEYS = Object.keys(ASUNTOS_CONFIG);
+
+  /**
+   * Determina si un asunto es válido para el perfil dado.
+   * El perfil "Otro" (comodín) ve todo el catálogo.
+   */
+  function asuntoAplicaA(asuntoKey, perfil) {
+    const config = ASUNTOS_CONFIG[asuntoKey];
+    if (!config) return false;
+    if (perfil === 'Otro') return true; // comodín: ve todos los asuntos
+    return config.perfiles.indexOf(perfil) !== -1;
+  }
 
   const STORAGE_KEY = 'fbcb-sender-profile';
   const STORAGE_VERSION = 1;
@@ -766,11 +914,6 @@
     const fbcb = AUTHORITIES.filter(function (a) { return a.ambito === 'FBCB'; });
     const unl = AUTHORITIES.filter(function (a) { return a.ambito !== 'FBCB'; });
 
-    const optDefault = document.createElement('option');
-    optDefault.value = '';
-    optDefault.textContent = '-- Seleccione una autoridad --';
-    els.destinatario.appendChild(optDefault);
-
     function addGroup(label, list) {
       const g = document.createElement('optgroup');
       g.label = label;
@@ -787,13 +930,20 @@
     addGroup('Rectorado de la Universidad Nacional del Litoral', unl);
   }
 
-  function renderSubjectSelector() {
+  /** Renderiza las opciones de asunto según el perfil activo. */
+  function renderSubjectSelector(perfil) {
+    // Limpiar opciones previas pero conservar el placeholder ("-- Seleccione un asunto --")
+    while (els.asunto.options.length > 1) {
+      els.asunto.remove(els.asunto.options.length - 1);
+    }
     ASUNTO_KEYS.forEach(function (k) {
+      if (!asuntoAplicaA(k, perfil)) return;
       const o = document.createElement('option');
       o.value = k;
       o.textContent = k;
       els.asunto.appendChild(o);
     });
+    els.asunto.value = ''; // reset a "Seleccione un asunto"
   }
 
   function renderCamposDinamicos() {
@@ -814,7 +964,21 @@
       label.setAttribute('for', 'dyn-' + c.id);
 
       let input;
-      if (c.tipo === 'textarea') {
+      if (c.tipo === 'select') {
+        input = document.createElement('select');
+        if (c.placeholder) {
+          const ph = document.createElement('option');
+          ph.value = '';
+          ph.textContent = c.placeholder;
+          input.appendChild(ph);
+        }
+        (c.opciones || []).forEach(function (op) {
+          const o = document.createElement('option');
+          o.value = op;
+          o.textContent = op;
+          input.appendChild(o);
+        });
+      } else if (c.tipo === 'textarea') {
         input = document.createElement('textarea');
       } else {
         input = document.createElement('input');
@@ -822,9 +986,10 @@
         if (c.tipo === 'date') input.max = '';
       }
       input.id = 'dyn-' + c.id;
-      input.placeholder = c.placeholder || '';
+      if (c.tipo !== 'select') input.placeholder = c.placeholder || '';
       if (c.obligatorio) input.required = true;
       input.addEventListener('input', actualizar);
+      input.addEventListener('change', actualizar);
       if (estado.campos[c.id]) input.value = estado.campos[c.id];
 
       seccion.appendChild(label);
@@ -864,6 +1029,20 @@
     estado.dni = els.dni.value;
     estado.email = els.email.value;
     estado.telefono = els.telefono.value;
+
+    // Cambio de perfil → re-renderizar el catálogo de asuntos filtrado
+    if (anterior.perfil !== estado.perfil) {
+      renderSubjectSelector(estado.perfil);
+      if (estado.asunto && !asuntoAplicaA(estado.asunto, estado.perfil)) {
+        // El asunto seleccionado ya no aplica al nuevo perfil → se resetea
+        estado.asunto = '';
+        estado.campos = {};
+        renderCamposDinamicos(); // limpiar los campos dinámicos del asunto viejo
+      } else if (estado.asunto) {
+        // El asunto sigue aplicando al nuevo perfil → se conserva la selección
+        els.asunto.value = estado.asunto;
+      }
+    }
 
     // Cambio de asunto → re-render de campos dinámicos
     const asuntoAnterior = estado.asunto;
@@ -1200,8 +1379,8 @@
 
   function init() {
     renderAuthoritySelector();
-    renderSubjectSelector();
     restaurarPerfil();
+    renderSubjectSelector(estado.perfil);
 
     // Fecha por defecto = hoy (editable en la vista previa)
     estado.fecha = fechaHoy();

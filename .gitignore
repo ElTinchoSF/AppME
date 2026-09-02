@@ -9,3 +9,6 @@ node_modules/
 
 # Copias temporales
 *~
+
+# Datos de investigación (muestras de expedientes FBCB scrapeadas, no son código del generador)
+/docs/
