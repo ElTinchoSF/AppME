@@ -363,10 +363,12 @@
 </head>
 <body>
 
-<h1>Generador de Notas</h1>
-<p class="subtitulo">Facultad de Bioquímica y Ciencias Biológicas — Universidad Nacional del Litoral</p>
+<header>
+  <h1>Generador de Notas</h1>
+  <p class="subtitulo">Facultad de Bioquímica y Ciencias Biológicas — Universidad Nacional del Litoral</p>
+</header>
 
-<div class="container">
+<main class="container">
   <!-- ============ PANEL: FORMULARIO ============ -->
   <div class="panel" id="panel-form">
     <h3>Datos de la nota</h3>
@@ -422,7 +424,7 @@
 
       <div class="botones-accion">
         <button type="button" id="btnDescargar">Descargar PDF</button>
-        <button type="button" id="btnCompartir" class="btn-compartir">Compartir</button>
+        <button type="button" id="btnCompartir" class="btn-compartir">🔗 Compartir</button>
       </div>
     </form>
   </div>
@@ -445,7 +447,7 @@
       </div>
     </div>
   </div>
-</div>
+</main>
 
 <!-- ============ MODAL DE COMPARTIR ============ -->
 <div id="modalCompartir" class="modal-overlay">
@@ -782,7 +784,7 @@
     }
 
     addGroup('Facultad de Bioquímica y Ciencias Biológicas', fbcb);
-    addGroup('Rectorado — Universidad Nacional del Litoral', unl);
+    addGroup('Rectorado de la Universidad Nacional del Litoral', unl);
   }
 
   function renderSubjectSelector() {
@@ -821,6 +823,7 @@
       }
       input.id = 'dyn-' + c.id;
       input.placeholder = c.placeholder || '';
+      if (c.obligatorio) input.required = true;
       input.addEventListener('input', actualizar);
       if (estado.campos[c.id]) input.value = estado.campos[c.id];
 
@@ -843,6 +846,18 @@
   }
 
   function actualizar() {
+    // Guardar valores previos para invalidar ediciones manuales de la vista previa
+    const anterior = {
+      perfil: estado.perfil,
+      destinatarioId: estado.destinatarioId,
+      asunto: estado.asunto,
+      nombre: estado.nombre,
+      dni: estado.dni,
+      email: estado.email,
+      telefono: estado.telefono
+    };
+    const camposAnteriores = JSON.stringify(estado.campos);
+
     estado.perfil = els.perfil.value;
     estado.destinatarioId = els.destinatario.value;
     estado.nombre = els.nombre.value;
@@ -858,6 +873,17 @@
       renderCamposDinamicos();
     }
     estado.campos = collectCampos();
+
+    // Invalidar las ediciones manuales de la vista previa cuyo origen cambió,
+    // para que el PDF exportado use el contenido regenerado y no texto stale.
+    if (anterior.destinatarioId !== estado.destinatarioId) estado.prev.destinatario = null;
+    if (anterior.asunto !== estado.asunto) { estado.prev.asunto = null; estado.prev.cuerpo = null; }
+    if (anterior.perfil !== estado.perfil) estado.prev.condicion = null;
+    if (anterior.nombre !== estado.nombre) estado.prev.nombre = null;
+    if (anterior.dni !== estado.dni) estado.prev.dni = null;
+    if (anterior.email !== estado.email) estado.prev.email = null;
+    if (anterior.telefono !== estado.telefono) estado.prev.telefono = null;
+    if (JSON.stringify(estado.campos) !== camposAnteriores) estado.prev.cuerpo = null;
 
     renderPreview();
   }
@@ -886,10 +912,15 @@
 
   function actualizarNombreArchivo() {
     const sugerido = generarNombreArchivo(estado.asunto, estado.nombre);
-    if (!els.archivoNombre.value || !els.archivoNombre.dataset.auto) {
+    if (els.archivoNombre.dataset.auto) {
+      // Modo automático: siempre regenerar ante cambios de asunto o nombre
+      els.archivoNombre.value = sugerido;
+    } else if (!els.archivoNombre.value) {
+      // Campo vacío: inicializar en modo auto
       els.archivoNombre.value = sugerido;
       els.archivoNombre.dataset.auto = '1';
     }
+    // Si no es auto y tiene valor → modo manual, no tocar
   }
 
   /** Captura las ediciones manuales de la vista previa (contenteditable) en el estado de exportación. */
@@ -925,9 +956,9 @@
 
     if (!validarPerfil(estado.perfil)) marcarInvalido(els.perfil, 'Seleccione un perfil.');
     if (!validarNombre(estado.nombre)) marcarInvalido(els.nombre, 'Ingrese el nombre completo.');
-    if (!validarDNI(estado.dni)) marcarInvalido(els.dni, 'El DNI debe tener 7 u 8 dígitos.');
-    if (!validarEmail(estado.email)) marcarInvalido(els.email, 'Ingrese un email válido.');
-    if (!validarTelefono(estado.telefono)) marcarInvalido(els.telefono, 'El teléfono no es válido.');
+    if (!validarDNI(estado.dni)) marcarInvalido(els.dni, 'Por favor, ingrese un DNI válido (solo números, 7 u 8 dígitos, sin puntos).');
+    if (!validarEmail(estado.email)) marcarInvalido(els.email, 'Por favor, ingrese un correo electrónico válido.');
+    if (!validarTelefono(estado.telefono)) marcarInvalido(els.telefono, 'Por favor, ingrese un número de teléfono válido.');
     if (!estado.destinatarioId) marcarInvalido(els.destinatario, 'Seleccione un destinatario.');
     if (!estado.asunto) marcarInvalido(els.asunto, 'Seleccione un asunto.');
 
@@ -982,7 +1013,10 @@
     els.vFecha.textContent = exportState.fecha;
     els.vDestinatario.innerHTML = exportState.destinatarioHtml;
     els.vAsunto.textContent = exportState.asunto;
-    els.vContenido.innerHTML = exportState.cuerpo;
+    // Cuerpo como TEXTO (no HTML): elimina el vector de self-XSS por campos
+    // dinámicos y es consistente con renderPreview. Los \n se renderizan
+    // como saltos de línea gracias a white-space: pre-wrap en .cuerpo.
+    els.vContenido.textContent = exportState.cuerpo;
     els.vCondicion.textContent = exportState.condicion;
     els.vNombre.textContent = exportState.nombre;
     els.vDni.textContent = exportState.dni;
@@ -999,6 +1033,10 @@
     // opciones: { save: bool, share: bool }
     if (!validarFormulario()) return false;
     if (typeof html2pdf === 'undefined') {
+      console.error('Error: La librería html2pdf no se cargó correctamente');
+      // Deshabilitar ambos botones: no se puede generar PDF sin la librería
+      els.btnDescargar.disabled = true;
+      els.btnCompartir.disabled = true;
       mostrarError('Error: la librería de PDF no se cargó correctamente. Verifique que lib/html2pdf.bundle.min.js exista.');
       return false;
     }
@@ -1016,7 +1054,7 @@
     els.btnDescargar.disabled = true;
     els.btnCompartir.disabled = true;
     els.btnDescargar.textContent = 'Generando...';
-    els.btnCompartir.textContent = 'Generando...';
+    els.btnCompartir.textContent = ' Generando...';
 
     const opt = {
       margin: 20,
@@ -1086,9 +1124,16 @@
 
     try {
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: nombre });
+        await navigator.share({
+          title: 'Nota FBCB: ' + estado.asunto,
+          text: 'Nota generada desde la Facultad de Bioquímica y Ciencias Biológicas - UNL',
+          files: [file]
+        });
+      } else if (navigator.share) {
+        alert('Tu dispositivo no soporta compartir archivos. Se descargará el PDF.');
+        descargarBlob(blob, nombre);
       } else {
-        alert('Tu dispositivo no soporta compartir archivos. Se descargó el PDF.');
+        alert('Tu navegador no soporta compartir nativo. Se descargará el PDF.');
         descargarBlob(blob, nombre);
       }
     } catch (err) {
@@ -1121,7 +1166,12 @@
 
   function restaurarPerfil() {
     const perfil = loadProfile();
-    if (!perfil) return;
+    if (!perfil) {
+      // Primera vez (sin localStorage): perfil por defecto "Alumno" según spec
+      estado.perfil = 'Alumno';
+      els.perfil.value = 'Alumno';
+      return;
+    }
     estado.perfil = perfil.tipo;
     els.perfil.value = perfil.tipo;
     estado.nombre = perfil.nombre;
